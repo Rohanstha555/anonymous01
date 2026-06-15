@@ -2,8 +2,10 @@ import { prisma } from "../../db/dbconnect.js";
 import type { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import { SendVerificationEmail } from "../../helper/sendVerificationEmail.js";
+import { ApiError } from "../../../utils/ApiError.js";
+import { ApiResponse } from "../../../utils/ApiResponse.js";
 
-export const registerUser = async (req: Request, res: Response) => {
+export const registerUser = async (req: Request) => {
   try {
     const { username, email, password } = req.body;
 
@@ -15,10 +17,7 @@ export const registerUser = async (req: Request, res: Response) => {
     });
 
     if (existingUserVerifiedByUsername) {
-      return res.status(400).json({
-        success: false,
-        message: "username already taken",
-      });
+      throw new ApiError(400, "username already taken");
     }
 
     const exisitingUserByEmail = await prisma.user.findUnique({
@@ -28,10 +27,9 @@ export const registerUser = async (req: Request, res: Response) => {
 
     if (exisitingUserByEmail) {
       if (exisitingUserByEmail.isVerified) {
-        return res.status(400).json({
-          success: false,
-          message: "user already exist with this email",
-        });
+
+        throw new ApiError(400, "user already exist with this email");
+
       } else {
         const hashedPassword = await bcrypt.hash(password, 10);
         await prisma.user.update({
@@ -62,21 +60,13 @@ export const registerUser = async (req: Request, res: Response) => {
     );
 
     if (!emailResponse.success) {
-      return Response.json({
-        success: false,
-        message: emailResponse.message,
-      });
+      throw new ApiError(500, emailResponse.message);
     }
 
-    return res.status(201).json({
-      success: true,
-      message: "User registered successfully",
-    });
+    return new ApiResponse(201, "User registered successfully");
+
   } catch (error) {
     console.error("Error registering user:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    throw new ApiError(500, "internal server error");
   }
 };
