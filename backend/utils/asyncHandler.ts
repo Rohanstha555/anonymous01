@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 
-const ayncHandler =
+const asyncHandler =
   (requestHandler: any) =>
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -10,4 +10,4 @@ const ayncHandler =
     }
   };
 
-export default ayncHandler;
+export default asyncHandler;
