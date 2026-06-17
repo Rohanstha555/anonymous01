@@ -8,8 +8,7 @@ import asyncHandler from "../../../utils/asyncHandler.js";
 
 export const registerUser = asyncHandler(
   async (req: Request, res: Response) => {
-    try {
-      const { username, email, password } = req.body;
+    const { username, email, password } = req.body;
 
       const existingUserByUsername = await prisma.user.findUnique({
         where: { username },
@@ -60,12 +59,48 @@ export const registerUser = asyncHandler(
       return res
         .status(201)
         .json(new ApiResponse(201, "User registered successfully"));
-    } catch (error) {
-      if (error instanceof ApiError) throw error;
-        console.error("FULL ERROR:", JSON.stringify(error, null, 2));  
-  console.error("ERROR MESSAGE:", (error as Error).message);   
-      console.error("Error registering user:", error);
-      throw new ApiError(500, "Internal server error");
-    }
   },
 );
+
+
+export const loginUser = asyncHandler(async (req: Request, res: Response) => {
+  const {username, email, password} = req.body
+  const user = await prisma.user.findUnique({where: {
+    username,
+    email
+  }})
+
+  if(!user){
+     throw new ApiError(400, "user not found")
+  }
+
+  const isPasswordcorrect = await bcrypt.compare(
+    password,
+    user.password
+  )
+
+  if(!isPasswordcorrect){
+    throw new ApiError(401, "Incorrect Password")
+  }
+  // Remove password from the returned object for security
+  const { password: _, ...loggedInUser } = user;
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, loggedInUser, "User logged in successfully"));
+})
+
+
+/*      for register
+
+1. make a function with parameter request
+2. take details from req,body
+3. validation- not empty
+4. check if user already exist from username or email
+5. check for images
+6. upload them from cloudinary
+7. create user object-create entry in db
+8. remove password and refresh token in response
+9. return response
+
+*/
