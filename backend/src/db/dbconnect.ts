@@ -1,3 +1,11 @@
+/**
+ * Steps for Database Connection:
+ * 1. Import necessary Prisma and PostgreSQL connection modules.
+ * 2. Create a new PostgreSQL connection pool using the DATABASE_URL environment variable.
+ * 3. Initialize the Prisma Pg adapter with the connection pool.
+ * 4. Instantiate the Prisma Client using the initialized adapter.
+ * 5. Define an async connectDB function to establish and verify the database connection.
+ */
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../generated/prisma/index.js";
 

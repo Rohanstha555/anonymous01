@@ -40,6 +40,18 @@ const generateAccessTokenAndRefreshToken = async (userId:string) => {
   }
 }
 
+ const ACCESS_TOKEN_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: true,
+  maxAge: 15 * 60 * 1000, // 15 minutes — match this to whatever generateAccessToken signs into the JWT
+};
+
+  const REFRESH_TOKEN_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: true,
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+};
+
 export const registerUser = asyncHandler(
   async (req: Request, res: Response) => {
     const { username, email, password } = req.body;
@@ -127,19 +139,7 @@ export const loginUser = asyncHandler(async (req: Request, res: Response) => {
   const { accessToken, refreshToken } = await generateAccessTokenAndRefreshToken(user.id)
 
   // Remove password from the returned object for security
-  const { password: _, ...loggedInUser } = user;
-
-  const ACCESS_TOKEN_COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: true,
-  maxAge: 15 * 60 * 1000, // 15 minutes — match this to whatever generateAccessToken signs into the JWT
-};
-
-  const REFRESH_TOKEN_COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: true,
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-};
+  const { password: _, refreshToken: __, ...loggedInUser } = user;
 
   return res
     .status(200)
@@ -148,6 +148,19 @@ export const loginUser = asyncHandler(async (req: Request, res: Response) => {
     .json(new ApiResponse(200,{
       user: loggedInUser, accessToken, refreshToken 
     }, "User logged in successfully"));
+})
+
+export const logoutUser = asyncHandler(async(req: Request, res: Response) => {
+  await prisma.user.update({
+    where: {id: req.user.id},
+    data: {refreshToken: null}
+  })
+
+  return res
+  .status(200)
+  .clearCookie("accessToken", ACCESS_TOKEN_COOKIE_OPTIONS)
+  .clearCookie("refreshToken", REFRESH_TOKEN_COOKIE_OPTIONS)
+  .json(new ApiResponse(200, "Logout successful"))
 })
 
 
