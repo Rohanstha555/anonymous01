@@ -5,6 +5,40 @@ import { SendVerificationEmail } from "../../helper/sendVerificationEmail.js";
 import { ApiError } from "../../../utils/ApiError.js";
 import { ApiResponse } from "../../../utils/ApiResponse.js";
 import asyncHandler from "../../../utils/asyncHandler.js";
+import { generateAccessToken, generateRefreshToken } from "../../../utils/generateTokens.js";
+
+
+const generateAccessTokenAndRefreshToken = async (userId:string) => {
+  try {
+    const user = await prisma.user.findUnique({where: {id: userId}})
+
+    if(!user){
+      throw new ApiError(404, "User not found")
+    }
+
+    const payload = {
+      id: user.id,
+      email: user.email,
+      username: user.username
+    }
+    const accessToken = generateAccessToken(payload)
+    const refreshToken = generateRefreshToken(payload)
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        refreshToken: refreshToken,
+      },
+    });
+    
+    return {
+      accessToken,
+      refreshToken
+    }
+  } catch (error) {
+    throw new ApiError(500, "something went wrong while generating access or refresh token")
+  }
+}
 
 export const registerUser = asyncHandler(
   async (req: Request, res: Response) => {
@@ -65,9 +99,16 @@ export const registerUser = asyncHandler(
 
 export const loginUser = asyncHandler(async (req: Request, res: Response) => {
   const {username, email, password} = req.body
-  const user = await prisma.user.findUnique({where: {
-    username,
-    email
+
+  if(!username && !email){
+    throw new ApiError(400, "username or email required")
+  }
+
+  const user = await prisma.user.findFirst({where: {
+    OR:  [
+        ...(email ? [{ email }] : []),
+        ...(username ? [{ username }] : []),
+      ],
   }})
 
   if(!user){
@@ -82,12 +123,31 @@ export const loginUser = asyncHandler(async (req: Request, res: Response) => {
   if(!isPasswordcorrect){
     throw new ApiError(401, "Incorrect Password")
   }
+
+  const { accessToken, refreshToken } = await generateAccessTokenAndRefreshToken(user.id)
+
   // Remove password from the returned object for security
   const { password: _, ...loggedInUser } = user;
 
+  const ACCESS_TOKEN_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: true,
+  maxAge: 15 * 60 * 1000, // 15 minutes — match this to whatever generateAccessToken signs into the JWT
+};
+
+  const REFRESH_TOKEN_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: true,
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+};
+
   return res
     .status(200)
-    .json(new ApiResponse(200, loggedInUser, "User logged in successfully"));
+    .cookie("accessToken", accessToken, ACCESS_TOKEN_COOKIE_OPTIONS)
+    .cookie("refreshToken", refreshToken, REFRESH_TOKEN_COOKIE_OPTIONS)
+    .json(new ApiResponse(200,{
+      user: loggedInUser, accessToken, refreshToken 
+    }, "User logged in successfully"));
 })
 
 
@@ -102,5 +162,18 @@ export const loginUser = asyncHandler(async (req: Request, res: Response) => {
 7. create user object-create entry in db
 8. remove password and refresh token in response
 9. return response
+
+*/
+
+
+/*
+      for login
+
+1. take details from body
+2. find user
+3. password check
+4. access and refresh token
+5. send token in cookies
+6. response
 
 */

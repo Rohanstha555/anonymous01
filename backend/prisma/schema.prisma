@@ -21,7 +21,8 @@ password       String
 email          String    @unique
 verifyCode     String
 isVerified     Boolean    @default(false)
-isAccempingMessaages  Boolean   @default(true)
+isAccepingMessaages  Boolean   @default(true)
+refreshToken   String?
 messages  Message[]
 @@map("users")
 
