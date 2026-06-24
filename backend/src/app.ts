@@ -15,10 +15,12 @@ app.use(cookieParser())
 
 //import router
 import UserRouter from './routes/user.routes.js';
+import MessageRouter from './routes/message.route.js';
 
 //routes declaration
 
 app.use("/api/v1/users", UserRouter)
+app.use("/api/v1/Messages", MessageRouter)
 
 
 

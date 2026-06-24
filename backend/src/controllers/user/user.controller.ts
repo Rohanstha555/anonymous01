@@ -74,7 +74,8 @@ export const registerUser = asyncHandler(
 
 */
     const { username, email, password } = req.body;
-
+    console.log("username:", username);
+    
     const existingUserByUsername = await prisma.user.findUnique({
       where: { username },
     });
