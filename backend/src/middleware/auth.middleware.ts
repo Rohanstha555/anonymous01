@@ -43,5 +43,7 @@ export const verifyJWT = asyncHandler(async (req: Request, res: Response, next: 
   }
 
   req.user = user;
+  console.log(req.user);
+  
   next();
 });
