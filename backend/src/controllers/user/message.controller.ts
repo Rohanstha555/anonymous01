@@ -53,7 +53,7 @@ export const getMessage = asyncHandler(
     }
 
     const message = await prisma.message.findMany({
-      where: { id: userId },
+      where: { userId },
       orderBy: { createdAt: "desc" },
     });
     console.log(message);
@@ -109,5 +109,38 @@ export const postAcceptMessage = asyncHandler(
     });
 
     return res.json(new ApiResponse(200, "status updated successfully"));
+  },
+);
+
+export const deleteMessage = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      throw new ApiError(401, "Unauthorized. Please log in.");
+    }
+
+    const userId = req.user.id;
+    const { messageId } = req.params;
+    console.log("userId:", userId);
+    console.log("messageId:", messageId);
+
+    if (!userId) {
+      throw new ApiError(400, "Invalid user ID");
+    }
+
+    const message = await prisma.message.findUnique({
+      where: { id: messageId as string },
+    });
+
+    if (!message) {
+      throw new ApiError(404, "message not found");
+    }
+
+    if (message.userId !== userId) {
+      throw new ApiError(403, "You are not authorized to delete this message");
+    }
+
+    await prisma.message.delete({ where: { id: messageId as string } });
+
+    return res.json(new ApiResponse(200, "Message Deleted Successfully"));
   },
 );
